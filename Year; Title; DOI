@@ -1,0 +1,23 @@
+from bs4 import BeautifulSoup
+import os
+
+page = """C:/Users/Antoine/PycharmProjects/Predicted_HSQC/Predicted_HSQC_files/HTML JNP articles/2011/1/Landomycins P−W, Cytotoxic Angucyclines from Streptomyces cyanogenus S-136   Journal of Natural Products.html"""
+html_file = open(page, encoding='utf-8-sig')
+
+soup = BeautifulSoup(html_file, 'html.parser')
+div = soup.find('div')
+# print(div.prettify())
+
+DOILink = div.find('div', class_='article_header-doiurl').a.text
+DOIFileName1 = os.path.split(os.path.dirname(DOILink))[1]
+DOIFileName2 = os.path.split(DOILink)[1]
+DOI = str(DOIFileName1 + "/" + DOIFileName2)
+
+title = div.find('div', class_='article_header-left pull-left').h1.span.text
+
+year = div.find('ul', class_="rlist article-chapter-history-list").text
+year = str(year)
+year = year[-4:]
+
+CSVFileName = str(year + "; " + title + "; " + DOI)
+print(CSVFileName)
