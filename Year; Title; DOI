@@ -21,3 +21,4 @@ year = year[-4:]
 
 CSVFileName = str(year + "; " + title + "; " + DOI)
 print(CSVFileName)
+
