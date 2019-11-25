@@ -12,33 +12,38 @@ soup = BeautifulSoup(html_file, 'html.parser')
 # removing links and bolded text tags, and their contents
 for b in soup('b'):
     b.decompose()
-# for a in soup('a'):
-#     a.decompose()
 div = soup.find('div')
 # print(div.prettify())
 
+########################################################################################################################
+# # # List of all NMR table titles # # #
+table_titles = div.find_all('div', class_='NLM_caption')
+table_titles = [ele.text.strip() for ele in table_titles]
+table_titles = [ele.replace(" ()", "") for ele in table_titles]
+table_titles = [ele.replace("/", " ") for ele in table_titles]                                                          # un-separated list of NMR table titles
+
+########################################################################################################################
+# finds DOI, article title, year, and combines them into a string csv_file_name [had to shorten to just DOI]
+html_file = open(page, encoding='utf-8-sig')
+soup = BeautifulSoup(html_file, 'html.parser')
+div = soup.find('div')
+DOILink = div.find('div', class_='article_header-doiurl').a.text
+DOIFileName1 = os.path.split(os.path.dirname(DOILink))[1]
+DOIFileName2 = os.path.split(DOILink)[1]
+DOI = str(DOIFileName1 + "-" + DOIFileName2)
+
+title = div.find('div', class_='article_header-left pull-left').h1.span.text
+print(title)
+year = div.find('ul', class_='rlist article-chapter-history-list').text
+year = str(year)
+year = year[-4:]
+
+csv_file_name = str(title + "; " + year + "; " + DOI)
 
 ########################################################################################################################
 # # # FUNCTION TO CREATE NEW FOLDERS CONTAINING NEW CSV FILES # # #
-# 1st: finds DOI, article title, year, and combines them into a string csv_file_name [had to shorten to just DOI]
-# 2nd: creates new directory; returns directory path
-def create_folders():
-    html_file = open(page, encoding='utf-8-sig')
-    soup = BeautifulSoup(html_file, 'html.parser')
-    div = soup.find('div')
-    DOILink = div.find('div', class_='article_header-doiurl').a.text
-    DOIFileName1 = os.path.split(os.path.dirname(DOILink))[1]
-    DOIFileName2 = os.path.split(DOILink)[1]
-    DOI = str(DOIFileName1 + "-" + DOIFileName2)
-
-    title = div.find('div', class_='article_header-left pull-left').h1.span.text
-
-    year = div.find('ul', class_='rlist article-chapter-history-list').text
-    year = str(year)
-    year = year[-4:]
-
-    csv_file_name = str(year + "; " + title + "; " + DOI)
-
+# creates new directory; returns directory path
+def folder_path():
     parent_dir = "C:/Users/Antoine/Desktop/2011"
     directory = DOI
     path = os.path.join(parent_dir, directory)
@@ -48,31 +53,16 @@ def create_folders():
         pass
 
     return path
-########################################################################################################################
-
-
-########################################################################################################################
-# # # List of all NMR table titles # # #
-table_titles = div.find_all('div', class_='NLM_caption')
-table_titles = [ele.text.strip() for ele in table_titles]
-table_titles = [ele.replace(" ()", "") for ele in table_titles]
-table_titles = [ele.replace("/", " ") for ele in table_titles]                                                          # un-separated list of NMR table titles
-
-# n = len(table_titles)                                                                                                   # number of csv files to create
-########################################################################################################################
 
 ########################################################################################################################
 # # # Headers, Footnotes, Miscellaneous data  # # #
 headers = div.find_all('th', class_='colsep0 rowsep0')
 headers = [ele.text.strip() for ele in headers]
 headers = [ele.replace(" ()", " ") for ele in headers]
-# print(headers)
 
 footnotes = div.find_all('div', class_="footnote")
 footnotes = [ele.text.strip() for ele in footnotes]
-# print(footnotes.prettify())
-# print(footnotes)
-# print()
+
 temp_headers = []
 rest_headers = headers
 temp_footnotes = []
@@ -84,185 +74,65 @@ start = 0
 final_headers = []
 count = 0
 header_3 = str('')
+previous_item = 0
+data = [[csv_file_name]]
+list_of_lists_headers1 = []
+list_of_lists_headers2 = []
+list_of_lists_headers3 = []
+
 ########################################################################################################################
+# split footnotes list into new separate lists for each NMR table, then combine into a list of lists for appending later
+for i, footnote in enumerate(footnotes):
+    if i > 0 and footnote.startswith('a') or i == (len(footnotes) - 1):
+        temp_footnotes = footnotes[previous_i:i]
+        rest_footnotes = rest_footnotes[i:]
+        if i == (len(footnotes) - 1):
+            temp_footnotes = footnotes[previous_j:]
+        previous_i = i
+        list_of_lists_headers3 += [temp_footnotes]
 
-
-################################################  TESTING  #############################################################
-testing_data = []
-
-# for n in range(len(table_titles)):
-for i, header in enumerate(headers):                                                                           # split headers list into new separate lists headers for each NMR table
-    if i > 0 and header == '' or header.startswith('sugar') or i == (len(headers) - 1):
-        temp_headers = headers[previous_i:i]
-        rest_headers = rest_headers[i:]
-        if i == (len(headers) - 1):
-            temp_headers = headers[previous_i:]
-        previous_i = i                                                                                                  # previous final index for temp_header
-        testing_data.append(temp_headers)
-        print(temp_headers)
+for j, header in enumerate(headers):                                                                                    # split headers list into new separate lists headers for each NMR table
+    if j > 0 and header == '' or header.startswith('sugar') or j == (len(headers) - 1):
+        temp_headers = headers[previous_j:j]
+        rest_headers = rest_headers[j:]
+        if j == (len(headers) - 1):
+            temp_headers = headers[previous_j:]
+        previous_j = j                                                                                                  # previous final index for temp_header
         for l, temp_header in enumerate(temp_headers):
             if temp_header == "position":
                 header_1 = temp_headers[0:l]
                 header_2 = temp_headers[l:]
-                print(header_1)
-                print(header_2)
-                print()
-        # print(temp_headers)
-for j, footnote in enumerate(footnotes):                                                                           # split footnotes list into new separate lists for each NMR table
-    if j > 0 and footnote.startswith('a') or j == (len(footnotes) - 1):
-        temp_footnotes = footnotes[previous_j:j]
-        rest_footnotes = rest_footnotes[j:]
-        if j == (len(footnotes) - 1):
-            temp_footnotes = footnotes[previous_j:]
-        previous_j = j
-        # print(temp_footnotes)
-        # for temp_footnote in temp_footnotes:
-        #     header_3 += " " + str(temp_footnote)
-        testing_data.append(temp_footnotes)
-        # testing_data.append(header_3)
-        # header_3 = str('')
+                list_of_lists_headers1 += [header_1]
+                list_of_lists_headers2 += [header_2]
+                count += 1
 
-testing_data.append("")
-testing_data.append("ayyy lmao")
-# print(header_3)
-# print(testing_data)
-dftable = pd.DataFrame(testing_data)
-# print(dftable)
-
-########################################################################################################################
-# # # Get all tables in article, even non-NMR # # #
-# for tr in div.find_all('tr'):
-#     row = tr.text
-#     tds = tr.find_all('td')
-#     tds = tds.text
-#     print(row)
-#     for column in row:
-#         cell = []
-#         print(cell)
-
-# rows = soup.find_all('tr')
-# print(rows)
-# NMRTableHeader1 = div.find('tr', class_='colsep0').text
-# print(NMRTableHeader1)
-data = []
-data_with_headers = []
-
+count = 0
 # # # LOOP OVER ALL NMR TABLES STARTS HERE # # #
 for row in div.find_all('tr'):
-    # print(row)
-    # # # need to print headers before data
-    # if "class == 'colsep0'" in row:
-    #     header = div.find_all('tr', class_='colsep0')
-    #     print(header)
-    #     data_with_headers.append(header)
-    # else:
-    #     continue
-    # for header in div.find_all('th'):
-    #     header = header.text
-    #     # header = [ele.text.strip() for ele in header]
-    #     print(header)
-    # headers = div.find_all('th', class_='colsep0 rowsep0')
-    # headers = [ele.text.strip() for ele in headers]
-    # print(header)
-    # data.append(header)
-    # if header is None:
-    #     break
-    # else:
-    #     header = [ele.text.strip() for ele in header]
-    #     data.append(ele for ele in header if ele)  # Get rid of empty values)
-    #     # print(header)
     columns = row.find_all('td')
     columns = [ele.text.strip() for ele in columns]
-    if not columns:
-        if count == 0: pass
-        header_1 = ['', 'landomycin P a', 'landomycin Q a', 'landomycin R a']
-        header_2 = ['position', 'δCb,c', 'δH (500 MHz)b', 'δH (500 MHz)b', 'δH (500 MHz)d']
-        header_3 = ['aSee also Figures S13−S18.', 'bCDCl3.', 'c125 MHz.', 'dDMSO-d6.', 'eNot observed.']
-        data.append(header_1)
-        data.append(header_2)
-        data.append(header_3)
+    if columns == []:                                                                                                   # Pycharm suggests replace to "if not" but this is not equivalent,
+        if previous_item == []:                                                                                         # it breaks code at line 146 with "IndexError: list index out of range"
+            data.append(["---------------------------------------------------------------------------------------------------------------------------------------------------------------------"])
+            table_title = [f"{table_titles[count]}"]
+            footnote = ["Footnotes: " + f"{list_of_lists_headers3[count]}"]
+            data.append(table_title)
+            data.append(footnote)
+            data.append("")
+            data.append(list_of_lists_headers1[count])
+            data.append(list_of_lists_headers2[count])
+            count += 1
+            continue
+    previous_item = columns
     data.append(columns)
-    count += 1
-    # cols = row.find_all('tr')
-    # # cols = [ele.text.strip() for ele in columns]
-    # data_with_headers.append(cols)
 
-# print()
-# print(data)
-# dftable = pd.DataFrame(data)
+print(data)
+dftable = pd.DataFrame(data)
 # print(dftable)
 
-# for m, header in enumerate(headers):
-#     headers[m] = header.replace(" ()", "")
-    # n_lists = headers.count("")         # temporary replacement for table_title[i]
-    # for n in range(n_lists):
-    #     split_headers = headers.split("")
-#     # parts = headers.split('')
-#     # print(parts)
-#     if header == "":
-#         print('ok')
-#         np.split(headers, [0, i])
-# print(n_lists)
-
-# print(headers)
-# print()
-
-
-# # # split footnotes list into smaller lists, one for each NMR table
-# for m, header in enumerate(headers):
-#     if m > 0 and header == '' or m == (len(headers) - 1):
-#         temp_headers = headers[previous_i:m]
-#         rest_headers = rest_headers[m:]
-#         if m == (len(headers) - 1):
-#             temp_footnotes = footnotes[previous_i:]
-#         previous_i = m                                                                                                  # previous final index for temp_footnotes
-#         print(temp_headers)
-#         for j, footnote in enumerate(footnotes):
-#             if j > 0 and footnote.startswith('a') or j == (len(footnotes) - 1):
-#                 temp_footnotes = footnotes[start:j]
-#                 rest_footnotes = rest_footnotes[j:]
-#                 if j == (len(footnotes) - 1):
-#                     temp_footnotes = footnotes[start:]
-#                 start = j                                                                                               # previous final index for temp_footnotes
-#                 # print(temp_footnotes)                             #################
-#                 # print()
-#                 superscripts = {}                                                                                       # create dictionary for superscript/footnote pairs
-#                 # keys = range(len(alphabet))
-#                 # for k in keys:
-#                 #     superscripts[1] = (alphabet[1], temp_footnotes[1])
-#                 # print(superscripts)
-#                 # for n in len(temp_footnotes):
-#                 #     alphabet[n] = temp_footnotes[n]
-#                 #     print(alphabet)
-#                 for n, temp_header in enumerate(temp_headers):                                                          # replacing superscripts in headers with their footnotes
-#                     if temp_header.endswith('a'):
-#                         temp_header = temp_header[:-1]
-#                         # temp_a = temp_footnotes[0]
-#                         temp_a = '250MHz'
-#                         temp_header = temp_header + ' (' + temp_a + ')'
-#                         # print(temp_header)
-#                         # temp_headers[n] = temp_header
-########################################################################################################################
-
-########################################################################################################################
-# # # Split headers/footnotes list into new separate lists for each table; use both as 1st & 2nd table header lines in CSV
-for i, header in enumerate(headers):                                                                               # split headers list into new separate lists headers for each NMR table
-    if i > 0 and header == '' or header.startswith('sugar') or i == (len(headers) - 1):
-        temp_headers = headers[previous_i:i]
-        rest_headers = rest_headers[i:]
-        if i == (len(headers) - 1):
-            temp_headers = headers[previous_i:]
-        previous_i = i                                                                                                  # previous final index for temp_header
-        # print(temp_headers)
-
-for j, footnote in enumerate(footnotes):                                                                           # split footnotes list into new separate lists for each NMR table
-    if j > 0 and footnote.startswith('a') or j == (len(footnotes) - 1):
-        temp_footnotes = footnotes[previous_j:j]
-        rest_footnotes = rest_footnotes[j:]
-        if j == (len(footnotes) - 1):
-            temp_footnotes = footnotes[previous_j:]
-        previous_j = j                                                                                                  # previous final index for temp_footnotes
-        # print(temp_footnotes)
+# # # Create CSV files for each NMR Table # # #
+csv_path = folder_path() + f"/{title}.csv"
+dftable.to_csv(csv_path, index=False, header=False, encoding='utf-8-sig')
 
 ########################################################################################################################
 # # # Replace a,b,c,etc hyperlink in headers with table footnotes # # #
@@ -304,12 +174,6 @@ for j, footnote in enumerate(footnotes):                                        
 #         elif temp_header.endswith('d'):
 #             temp_header = temp_header[:-1]
 #             temp_header = temp_header + ' (' + d + ')'
-#         elif temp_header.endswith('e'):
-#             temp_header = temp_header[:-1]
-#             temp_header = temp_header + ' (' + e + ')'
-#         elif temp_header.endswith('f'):
-#             temp_header = temp_header[:-1]
-#             temp_header = temp_header + ' (' + f + ')'
 #         else:
 #             final_headers.append(temp_header)
 #         final_headers.append(temp_header)
@@ -321,11 +185,6 @@ for j, footnote in enumerate(footnotes):                                        
 # print(headers)
 # print(footnotes)
 # print(final_headers)
-########################################################################################################################
-# # # Create CSV files for each NMR Table # # #
-csv_path = create_folders() + f"/{table_titles[0]}.csv"
-dftable.to_csv(csv_path, index=False, header=True, encoding='utf-8-sig')
-# dftable.to_csv(csv_path, header=True, columns=headers, encoding='utf-8-sig')
 ########################################################################################################################
 
 # headers = div.find_all('th', class_='colsep0 rowsep0')
